@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ShoppingBag, Loader2, AlertCircle } from "lucide-react";
 import { loginAction } from "@/app/actions/auth.actions";
+import { acceptInvitationAction } from "@/app/actions/group.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
@@ -19,10 +20,17 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = searchParams.get("invite_token");
+    if (token) setInviteToken(token);
+  }, [searchParams]);
 
   const {
     register,
@@ -42,6 +50,19 @@ export default function LoginPage() {
       const res = await loginAction(values);
       if (res?.error) {
         setError(res.error);
+        return;
+      }
+
+      // Nếu có invite_token, accept lời mời sau khi đăng nhập
+      if (inviteToken) {
+        const inviteRes = await acceptInvitationAction(inviteToken);
+        if (inviteRes?.error) {
+          setError(`Đăng nhập thành công nhưng lỗi chấp nhận lời mời: ${inviteRes.error}`);
+          setTimeout(() => { router.push("/app"); router.refresh(); }, 3000);
+        } else {
+          router.push(`/app/${inviteRes.groupId}/overview`);
+          router.refresh();
+        }
       } else {
         router.push("/app");
         router.refresh();
@@ -136,7 +157,10 @@ export default function LoginPage() {
           <CardFooter className="flex flex-col gap-2 border-t border-neutral-50 bg-neutral-50/50 py-4 px-6 text-center text-sm text-neutral-500">
             <div>
               Chưa có tài khoản?{" "}
-              <Link href="/register" className="font-bold text-sky-500 hover:text-sky-600">
+              <Link
+                href={inviteToken ? `/register?invite_token=${inviteToken}` : "/register"}
+                className="font-bold text-sky-500 hover:text-sky-600"
+              >
                 Đăng ký ngay
               </Link>
             </div>
@@ -144,5 +168,19 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-50 to-white">
+          <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

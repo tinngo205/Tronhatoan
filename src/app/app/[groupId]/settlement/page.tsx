@@ -30,30 +30,29 @@ export default async function SettlementPage({ params, searchParams }: Settlemen
     redirect("/login");
   }
 
-  // 2. Fetch group members
+  // 2. Fetch members và periods song song
   const memberRepo = new SupabaseMemberRepository(supabase);
-  const members = await memberRepo.getGroupMembers(groupId);
+  const settlementRepo = new SupabaseSettlementRepository(supabase);
+  const [members, periods] = await Promise.all([
+    memberRepo.getGroupMembers(groupId),
+    settlementRepo.getPeriods(groupId),
+  ]);
 
   const currentMember = members.find((m) => m.memberId === user.id);
   if (!currentMember || currentMember.status !== "ACTIVE") {
     redirect("/app");
   }
 
-  // 3. Fetch all settlement periods for the group
-  const settlementRepo = new SupabaseSettlementRepository(supabase);
-  const periods = await settlementRepo.getPeriods(groupId);
-
-  // 4. Determine selected period ID
+  // 3. Determine selected period ID
   let selectedPeriodId: string | null = null;
   if (period_id) {
     selectedPeriodId = period_id;
   } else if (periods.length > 0) {
-    // Default to the first active OPEN period or the first period overall
     const openPeriod = periods.find((p) => p.status === "OPEN");
     selectedPeriodId = openPeriod ? openPeriod.id : periods[0].id;
   }
 
-  // 5. Calculate settlement summary for selected period
+  // 4. Calculate settlement summary for selected period
   let summary = null;
   if (selectedPeriodId) {
     const selectedPeriod = periods.find((p) => p.id === selectedPeriodId);

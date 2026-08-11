@@ -412,7 +412,10 @@ function RegisterForm() {
           <CardFooter className="flex flex-col gap-2 border-t border-neutral-50 bg-neutral-50/50 py-4 px-6 text-center text-sm text-neutral-500">
             <div>
               Đã có tài khoản?{" "}
-              <Link href="/login" className="font-bold text-sky-500 hover:text-sky-600">
+              <Link
+                href={inviteToken ? `/login?invite_token=${inviteToken}` : "/login"}
+                className="font-bold text-sky-500 hover:text-sky-600"
+              >
                 Đăng nhập
               </Link>
             </div>

@@ -20,19 +20,19 @@ export default async function ExpensesPage({ params }: ExpensesPageProps) {
     redirect("/login");
   }
 
-  // 2. Fetch group members
+  // 2. Fetch members và expenses song song
   const memberRepo = new SupabaseMemberRepository(supabase);
-  const members = await memberRepo.getGroupMembers(groupId);
+  const shoppingRepo = new SupabaseShoppingRepository(supabase);
+  const [members, expenses] = await Promise.all([
+    memberRepo.getGroupMembers(groupId),
+    shoppingRepo.getGroupExpenses(groupId),
+  ]);
 
-  // 3. Find current user's membership to pass their role (ADMIN/MEMBER)
+  // 3. Find current user's membership
   const currentMember = members.find((m) => m.memberId === user.id);
   if (!currentMember || currentMember.status !== "ACTIVE") {
     redirect("/app");
   }
-
-  // 4. Fetch group expenses (no dates filter initially, load all for the client to filter)
-  const shoppingRepo = new SupabaseShoppingRepository(supabase);
-  const expenses = await shoppingRepo.getGroupExpenses(groupId);
 
   return (
     <ExpensesClient

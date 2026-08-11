@@ -71,8 +71,7 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
     allocationService
   );
 
-  // 3. Determine date range dynamically
-  // Check if there is an active open settlement period
+  // 3. Lấy active period trước (cần để biết date range)
   const activePeriod = await settlementRepo.getActivePeriod(groupId);
   
   let startDate = "";
@@ -84,7 +83,6 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
     endDate = activePeriod.endDate;
     periodName = activePeriod.name;
   } else {
-    // Default to the current calendar month
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");
@@ -94,25 +92,31 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
     periodName = `Tháng ${now.getMonth() + 1}/${y} (Lắp ghép tự động)`;
   }
 
-  // 4. Calculate allocations and balances
+  // 4. Fetch calculateSettlement và expenses song song (2 query nặng nhất)
   let settlementSummary;
   let calculationError = null;
+  let allExpenses: Awaited<ReturnType<typeof shoppingRepo.getGroupExpenses>> = [];
 
-  try {
-    settlementSummary = await settlementService.calculateSettlement(groupId, startDate, endDate);
-  } catch (err: any) {
-    console.error("Lỗi tính toán quyết toán:", err);
-    calculationError = err.message || "Lỗi tính toán chi phí.";
+  const [settlementResult, expensesResult] = await Promise.allSettled([
+    settlementService.calculateSettlement(groupId, startDate, endDate),
+    shoppingRepo.getGroupExpenses(groupId, { startDate, endDate }),
+  ]);
+
+  if (settlementResult.status === "fulfilled") {
+    settlementSummary = settlementResult.value;
+  } else {
+    console.error("Lỗi tính toán quyết toán:", settlementResult.reason);
+    calculationError = settlementResult.reason?.message || "Lỗi tính toán chi phí.";
+  }
+
+  if (expensesResult.status === "fulfilled") {
+    allExpenses = expensesResult.value;
   }
 
   // 5. Get current user's balance
   const myBalance = settlementSummary?.balances.find((b) => b.memberId === user.id);
 
-  // 6. Fetch recent expenses (limit to 5)
-  const allExpenses = await shoppingRepo.getGroupExpenses(groupId, {
-    startDate,
-    endDate,
-  });
+  // 6. Filter recent expenses (limit to 5)
   const recentExpenses = allExpenses.filter((e) => e.status === "ACTIVE").slice(0, 5);
 
   // Format date helper
