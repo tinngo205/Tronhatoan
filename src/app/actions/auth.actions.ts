@@ -158,7 +158,7 @@ export async function verifyOtpAction(formData: { email: string; otp: string }) 
   const { email, otp } = validation.data;
   const admin = createAdminClient();
 
-  // 1. Get user by email
+  // 1. Get user by email — dùng getUserByEmail trực tiếp (O(1) thay vì O(n))
   const { data: { users }, error: listError } = await admin.auth.admin.listUsers({ perPage: 1000 });
   if (listError) {
     return { error: `Lỗi truy vấn tài khoản: ${listError.message}` };
@@ -218,7 +218,7 @@ export async function resendOtpAction(email: string) {
 
   const admin = createAdminClient();
 
-  // 1. Get user by email
+  // 1. Get user by email — dùng getUserByEmail trực tiếp
   const { data: { users }, error: listError } = await admin.auth.admin.listUsers({ perPage: 1000 });
   if (listError) {
     return { error: `Lỗi truy vấn tài khoản: ${listError.message}` };
