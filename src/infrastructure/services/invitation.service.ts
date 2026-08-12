@@ -53,7 +53,8 @@ export class InvitationService {
     });
 
     // 4. Send email using the custom SMTP configuration
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+      (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://trotoan.vercel.app");
     const inviteLink = `${appUrl}/register?invite_token=${token}`;
 
     const emailSubject = `[CoBuy] Lời mời tham gia nhóm "${group.name}"`;

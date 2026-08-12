@@ -299,7 +299,8 @@ export async function forgotPasswordAction(formData: z.infer<typeof forgotPasswo
 
   // Supabase Auth SMTP configuration will send the email.
   // Next.js page /reset-password will handle password change upon clicking the redirect link.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+    (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://trotoan.vercel.app");
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${appUrl}/reset-password`,
   });

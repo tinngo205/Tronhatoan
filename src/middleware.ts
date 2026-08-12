@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+// 3 ngày tính bằng giây — sliding window: mỗi lần dùng app sẽ reset lại
+const SESSION_MAX_AGE = 60 * 60 * 24 * 3; // 259200 giây
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -21,8 +24,15 @@ export async function middleware(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           });
+          // Gán maxAge 3 ngày cho mỗi auth cookie — tự động gia hạn mỗi lần request
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              maxAge: SESSION_MAX_AGE,
+              sameSite: "lax",
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+            })
           );
         },
       },
